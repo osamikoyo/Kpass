@@ -2,6 +2,8 @@ package data
 
 import (
 	"fmt"
+
+	"github.com/osamikoyo/kpass/internal/crypto"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -50,10 +52,37 @@ func (s *Storage) CheckPass(accname, pass string) (bool, error){
 }
 
 func (s *Storage) AddPassword(pass *Password, Accpassword string) error {
-	key, err := bcrypt.GenerateFromPassword([]byte(pass.Hash), bcrypt.DefaultCost)
+	password, err := crypto.Encrypt(pass.Hash, []byte(Accpassword))
 	if err != nil{
-		return fmt.Errorf("cant get hash: %w", err)
+		return err
 	}
 
-	
+	pass.Hash = password
+
+	result := s.db.Create(pass)
+	if result.Error != nil{
+		return fmt.Errorf("cant create pass in db: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Storage) GetPassword(theme, Accpassword string) (*Password, error) {
+	var pass Password
+
+	result := s.db.Where(&Password{
+		Theme: theme,
+	}).Find(&pass)
+	if result.Error != nil{
+		return nil, fmt.Errorf("cant get password: %w", result.Error)
+	}
+
+	password, err := crypto.Decrypt(pass.Hash, []byte(Accpassword))
+	if err != nil{
+		return nil, fmt.Errorf("cant do a decrypt: %w", err)
+	}
+
+	pass.Hash = password
+
+	return &pass, nil
 }
