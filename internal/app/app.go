@@ -15,6 +15,8 @@ func App() error {
 	)
 	reader := bufio.NewReader(os.Stdin)
 
+	
+
 	for {
 		input, err = reader.ReadString('\n')
 		if err != nil{
